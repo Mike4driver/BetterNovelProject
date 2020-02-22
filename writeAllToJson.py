@@ -9,7 +9,6 @@ import time
 import sqlite3
 import datetime
 from multiprocessing import Pool
-from concurrent.futures import ThreadPoolExecutor
 
 
 def getAllChapterLinks(link, browser):
