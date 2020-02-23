@@ -11,6 +11,7 @@ Warning: this script uses multiprocessing and launches as many processes as you 
 so don't be suprises if you have very high/maxed out cpu usage running this...
 
 Usage:
+
 python writeAllToJson.py http://wixuaworld.com/your-wuxia-world-novel-link
 
 To launch selenium and grab your disired novel and convert its text to audio
