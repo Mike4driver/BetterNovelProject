@@ -96,7 +96,12 @@ def chaptersToAudio(chapter, novel):
     speaker = Sapi()
     speaker.set_rate(4)
     voices = speaker.get_voices()
-    speaker.set_voice(voices[1])
+    speaker.set_voice(voices[1]) 
+    '''
+     this line selects a voice from the array of voices avaiable on your system. 
+     This value can be toyed with if you want to use a different voice. 
+     I plan on adding the option to change the voice to the command arguments
+     '''
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
     if 'volume' in chapter['chapterLink']:
         chapterNumber = "-".join(chapter['chapterLink'].split('/')[-2:])
