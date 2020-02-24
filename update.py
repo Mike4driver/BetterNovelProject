@@ -20,7 +20,7 @@ if __name__=="__main__":
     # # chrome_options.add_extension("./Driver/uBlock.crx")
     # browser = webdriver.Chrome(executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=10) as executer:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executer:
         futureToNovel = {executer.submit( nr.getNovelOnDemand, novelLink, conn, curs):novelLink for novelLink in novelLinks}
 
     # for link in novelLinks:
