@@ -67,23 +67,11 @@ def stringIsNum(x):
 
 def checkIfAudio(chapter, novel):
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
-    if 'volume' in chapter['chapterLink']:
-        chapterNumber = "-".join(chapter['chapterLink'].split('/')[-2:])
-    else:
-        chapterNumber = chapter['chapterLink'].split('/')[-1]
-        if 'chapter' in chapterNumber:
-            chapterNumber = chapterNumber.split('-')[-1]
-    if stringIsNum(chapterNumber):
-        if os.path.isfile(newPath + f"\{chapterNumber.zfill(5)}.mp3"):
-            print(f"Skipping Chapter {chapterNumber}/{len(novel['Chapters'])} Already Present")
-        else:
-            return chapter
-    else:
-        if os.path.isfile(newPath + f"\{chapterNumber.zfill(5)}.mp3"):
-            print(f"Skipping Chapter {chapterNumber}/{len(novel['Chapters'])} Already Present")
-        else:
-            return chapter
-
+    chapterNumber = chapter["chapterNumber"]
+    if os.path.isfile(newPath + f"\{str(chapterNumber).zfill(5)}.mp3"):
+        print(f"Skipping Chapter {chapterNumber}/{len(novel['Chapters'])} Already Present")
+    return chapter
+    
 def chaptersToAudio(chapter, novel):
     os.environ["LANG"] = "en_US.UTF-8"
 
@@ -103,51 +91,26 @@ def chaptersToAudio(chapter, novel):
      I plan on adding the option to change the voice to the command arguments
      '''
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
-    if 'volume' in chapter['chapterLink']:
-        chapterNumber = "-".join(chapter['chapterLink'].split('/')[-2:])
-    else:
-        chapterNumber = chapter['chapterLink'].split('/')[-1]
-        if 'chapter' in chapterNumber:
-            chapterNumber = chapterNumber.split('-')[-1]
-    if stringIsNum(chapterNumber):
-        if not os.path.isfile(newPath + f"\{chapterNumber.zfill(5)}.mp3"):
-            try:
-                browser = webdriver.Chrome(executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
-                chapterLinkNumber, chapterText = getChapterTexts(chapter['chapterLink'], browser)
-                browser.quit()
-                if chapterText:
-                    chapterText = re.sub("\[A-Za-z0-9]",'', chapterText)
-                    speaker.create_recording(newPath + f"\{chapterNumber.zfill(5)}.mp3", re.sub(r'Chapter \w+', r'', chapterText))
-                    curs.execute("INSERT INTO chapters VALUES (?,?,?)", [novel["Link"], chapterNumber.zfill(5), chapterText])
-                    conn.commit()
-                    print(f"Chapter {chapter['chapterNumber']}/{len(novel['Chapters'])} finished")
+    chapterNumber = chapter["chapterNumber"]
+    if not os.path.isfile(newPath + f"\{str(chapterNumber).zfill(5)}.mp3"):
+        try:
+            browser = webdriver.Chrome(executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
+            chapterLinkNumber, chapterText = getChapterTexts(chapter['chapterLink'], browser)
+            browser.quit()
+            if chapterText:
+                chapterText = re.sub("\[A-Za-z0-9]",'', chapterText)
+                speaker.create_recording(newPath + f"\{str(chapterNumber).zfill(5)}.mp3", re.sub(r'Chapter \w+', r'', chapterText))
+                curs.execute("INSERT INTO chapters VALUES (?,?,?)", [novel["Link"], str(chapterNumber).zfill(5), chapterText])
+                conn.commit()
+                print(f"Chapter {chapter['chapterNumber']}/{len(novel['Chapters'])} finished")
 
-            except:
-                try:
-                    browser.close()
-                except:
-                    pass
-        else:
-            print(f"Skipping Chapter {chapterNumber}/{len(novel['Chapters'])} Already Present")
-    else:
-        if not os.path.isfile(newPath + f"\{chapterNumber.zfill(5)}.mp3"):
+        except:
             try:
-                browser = webdriver.Chrome(executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
-                chapterLinkNumber, chapterText = getChapterTexts(chapter['chapterLink'], browser)
-                if chapterText:
-                    chapterText = re.sub("\[A-Za-z0-9]",'', chapterText)
-                    speaker.create_recording(newPath + f"\{chapterNumber}.mp3", re.sub(r'Chapter \w+', r'', chapterText))
-                    curs.execute("INSERT INTO chapters VALUES (?,?,?)", [novel["Link"], chapterNumber.zfill(5), chapterText])
-                    conn.commit()
-                    print(f"Chapter {chapter['chapterNumber']}/{len(novel['Chapters'])} finished")
-
+                browser.close()
             except:
-                try:
-                    browser.close()
-                except:
-                    pass
-        else:
-            print(f"Skipping Chapter {chapterNumber}/{len(novel['Chapters'])} Already Present")
+                pass
+    else:
+        print(f"Skipping Chapter {chapterNumber}/{len(novel['Chapters'])} Already Present")
         
         conn.close()
             
@@ -169,8 +132,11 @@ def getNovelOnDemand(novelLink, conn, curs):
     [len(novel["Chapters"]), novel["Name"], novelLink])
 
     conn.commit()
+    chapterCount = 0
 
     for chapter in novel["Chapters"]:
+        chapterCount+=1
+        chapter["chapterNumber"] = chapterCount
         newChapter = checkIfAudio(chapter, novel)
         if newChapter:
             nonPresentChapters.append((newChapter))
