@@ -53,7 +53,7 @@ def getChapterTexts(link, browser):
     browser.get(link)
     try:
         chapterLinkNumber = link.split('/')[-1]
-        chapterText = browser.find_element_by_id("chapter-content").text.replace("*", "").replace("￣", "").replace("_", "").replace("→", "").replace("Previous Chapter", "")
+        chapterText = browser.find_element_by_id("chapter-content").text.replace("Previous Chapter", "")
         return [chapterLinkNumber, chapterText]
     except:
         return False
