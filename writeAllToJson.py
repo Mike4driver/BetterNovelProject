@@ -102,8 +102,6 @@ def chaptersToAudio(chapter, novel):
             except:
                 pass
     else:
-        print(f"Skipping Chapter {chapterNumber}/{len(novel['Chapters'])} Already Present")
-        
         conn.close()
             
 
@@ -133,7 +131,7 @@ def getNovelOnDemand(novelLink, conn, curs):
         if newChapter:
             nonPresentChapters.append((newChapter))
     
-    print(f"System has {os.cpu_count()} cores... creating {os.cpu_count()} threads ") if len(nonPresentChapters) >= os.cpu_count() else print (f"Creating {len(nonPresentChapters)} threads") 
+    print(f"System has {os.cpu_count()} cores... creating {os.cpu_count()} processes") if len(nonPresentChapters) >= os.cpu_count() else print (f"Creating {len(nonPresentChapters)} processes") 
     # This will prevent the behavior we currently see where a the latest books in the update are all only being handled by the last process
     with Pool(processes=os.cpu_count()) as p:
         p.starmap(chaptersToAudio, [(chapter, novel) for chapter in nonPresentChapters])
