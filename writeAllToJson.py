@@ -1,6 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import json
 from SapiHelper import Sapi
 import os
 import re
@@ -9,12 +8,11 @@ import time
 import sqlite3
 import datetime
 from multiprocessing import Pool
-from concurrent.futures import ThreadPoolExecutor
 
 def getAllChapterLinks(link, browser):
     """
     Returns Dictionary containing information about the novel, Including the number of chapters and the chapter links
-    {Name, Link, Chapters [{chapterNumber, chapterLink}]}
+    {Name, Link, Chapters [{chapterLink}]}
     """
     browser.get(link)
     try:
@@ -33,14 +31,9 @@ def getAllChapterLinks(link, browser):
         i = 0
         for chapterLink in chapterLinks:
             i+=1
-            # print('{}/{} Chapters for this Novel Completed'.format(i, len(chapterLinks)))
             novelInfo["Chapters"].append({
-                "chapterNumber": i,
                 "chapterLink": chapterLink,
-                # "chapterText": getChapterTexts(chapterLink, browser)[1]
             })
-            # novelInfo["Chapters"]["chapterLink"] = chapterLink
-            # novelInfo["Chapters"]["chapterText"] = getChapterTexts(chapterLink, browser)
     except:
         novelInfo = {}
 
@@ -69,7 +62,7 @@ def checkIfAudio(chapter, novel):
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
     chapterNumber = chapter["chapterNumber"]
     if os.path.isfile(newPath + f"\{str(chapterNumber).zfill(5)}.mp3"):
-        print(f"Skipping Chapter {chapterNumber}/{len(novel['Chapters'])} Already Present")
+        return None
     return chapter
     
 def chaptersToAudio(chapter, novel):
@@ -80,7 +73,6 @@ def chaptersToAudio(chapter, novel):
 
     chrome_options = Options()
     chrome_options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript':2})
-    # chrome_options.add_extension('./Driver/uBlock-Origin.crx')
     speaker = Sapi()
     speaker.set_rate(4)
     voices = speaker.get_voices()
@@ -119,7 +111,6 @@ def getNovelOnDemand(novelLink, conn, curs):
     os.environ["LANG"] = "en_US.UTF-8"
     chrome_options = Options()
     chrome_options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript':2})
-    # chrome_options.add_extension("./Driver/uBlock.crx")
     browser = webdriver.Chrome(executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
     novel = getAllChapterLinks(novelLink, browser)
     novel["Chapters"] = [chapter for chapter in novel["Chapters"] if "collapse" not in chapter["chapterLink"]]
@@ -134,6 +125,7 @@ def getNovelOnDemand(novelLink, conn, curs):
     conn.commit()
     chapterCount = 0
 
+    print(f"Skipping present chapters for {novel['Name']}")
     for chapter in novel["Chapters"]:
         chapterCount+=1
         chapter["chapterNumber"] = chapterCount
@@ -144,7 +136,6 @@ def getNovelOnDemand(novelLink, conn, curs):
     print(f"System has {os.cpu_count()} cores... creating {os.cpu_count()} threads ") if len(nonPresentChapters) >= os.cpu_count() else print (f"Creating {len(nonPresentChapters)} threads") 
     # This will prevent the behavior we currently see where a the latest books in the update are all only being handled by the last process
     with Pool(processes=os.cpu_count()) as p:
-        # for chapter in novel["Chapters"]:
         p.starmap(chaptersToAudio, [(chapter, novel) for chapter in nonPresentChapters])
         
 
