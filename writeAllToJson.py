@@ -18,22 +18,21 @@ def getAllChapterLinks(link, browser):
     try:
         chapterContainer = browser.find_element_by_id('accordion')
         
-        chapterElems = []
-        for chapterElem in chapterContainer.find_elements_by_tag_name('a'):
-            chapterElems.append(chapterElem)
+        chapterElems = (chapterElem for chapterElem in chapterContainer.find_elements_by_tag_name('a'))
+        # for chapterElem in chapterContainer.find_elements_by_tag_name('a'):
+        #     chapterElems.append(chapterElem)
 
-        chapterLinks = [chapterElem.get_attribute("href") for chapterElem in chapterElems]
+        chapterLinks = (chapterElem.get_attribute("href") for chapterElem in chapterElems)
         novelInfo = {
             "Name": link.split("/")[-1],
             "Link": link,
             "Chapters":[]
         }
-        i = 0
-        for chapterLink in chapterLinks:
-            i+=1
-            novelInfo["Chapters"].append({
-                "chapterLink": chapterLink,
-            })
+        novelInfo["Chapters"] = ({"chapterLink":chapterLink} for chapterLink in chapterLinks if "collapse" not in chapterLink)
+        # for chapterLink in chapterLinks:
+        #     novelInfo["Chapters"].append({
+        #         "chapterLink": chapterLink,
+        #     })
     except:
         novelInfo = {}
 
@@ -72,6 +71,7 @@ def chaptersToAudio(chapter, novel):
     curs = conn.cursor()
 
     chrome_options = Options()
+    # chrome_options.add_argument("--headless")
     chrome_options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript':2})
     speaker = Sapi()
     speaker.set_rate(4)
@@ -108,17 +108,17 @@ def chaptersToAudio(chapter, novel):
 def getNovelOnDemand(novelLink, conn, curs):
     os.environ["LANG"] = "en_US.UTF-8"
     chrome_options = Options()
+    # chrome_options.add_argument("--headless")
     chrome_options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript':2})
     browser = webdriver.Chrome(executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
     novel = getAllChapterLinks(novelLink, browser)
-    novel["Chapters"] = [chapter for chapter in novel["Chapters"] if "collapse" not in chapter["chapterLink"]]
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
     if not os.path.exists(newPath):
         os.makedirs(newPath)
     nonPresentChapters = []
 
-    curs.execute("UPDATE links SET totalChapters=?, novelName=? WHERE link=?", 
-    [len(novel["Chapters"]), novel["Name"], novelLink])
+    curs.execute("UPDATE links SET lastUpdated=?, totalChapters=?, novelName=? WHERE link=?", 
+    [datetime.datetime.now(),len(list(novel["Chapters"])), novel["Name"], novelLink])
 
     conn.commit()
     chapterCount = 0
@@ -141,18 +141,19 @@ def getNovelOnDemand(novelLink, conn, curs):
 
 if __name__ == '__main__':
     start_time = time.time()
-    newNovelLink = sys.argv[1]
+    newNovelLinks = sys.argv[1:]
     conn = sqlite3.connect("novels.db")
     curs = conn.cursor()
-    oldNovelLinks = []
-    for row in curs.execute("SELECT link FROM links"):
-        oldNovelLinks.append(row[0])
-    
-    if newNovelLink not in oldNovelLinks:
-        curs.execute("INSERT INTO links VALUES (?, ?, ?, ?)", [newNovelLink, datetime.datetime.now(), None, None])
-        conn.commit()
+    oldNovelLinks = (row[0] for row in curs.execute("SELECT link FROM links"))
 
-    getNovelOnDemand(newNovelLink, conn, curs)
+    
+    for link in newNovelLinks:
+        if link not in oldNovelLinks:
+            curs.execute("INSERT INTO links VALUES (?, ?, ?, ?)", [link, datetime.datetime.now(), None, None])
+            conn.commit()
+
+        getNovelOnDemand(link, conn, curs)
+
     conn.close()
 
 
