@@ -29,10 +29,6 @@ def getAllChapterLinks(link, browser):
             "Chapters":[]
         }
         novelInfo["Chapters"] = ({"chapterLink":chapterLink} for chapterLink in chapterLinks if "collapse" not in chapterLink)
-        # for chapterLink in chapterLinks:
-        #     novelInfo["Chapters"].append({
-        #         "chapterLink": chapterLink,
-        #     })
     except:
         novelInfo = {}
 
@@ -94,7 +90,7 @@ def chaptersToAudio(chapter, novel):
                 speaker.create_recording(newPath + f"\{str(chapterNumber).zfill(5)}.mp3", re.sub(r'Chapter \w+', r'', chapterText))
                 curs.execute("INSERT INTO chapters VALUES (?,?,?)", [novel["Link"], str(chapterNumber).zfill(5), chapterText])
                 conn.commit()
-                print(f"Chapter {chapter['chapterNumber']}/{len(novel['Chapters'])} finished")
+                print(f"Chapter {chapter['chapterNumber']} finished")
 
         except:
             try:
@@ -128,11 +124,12 @@ def getNovelOnDemand(novelLink, conn, curs):
         if newChapter:
             nonPresentChapters.append((newChapter))
     
-    curs.execute("UPDATE links SET lastUpdated=?, totalChapters=?, novelName=? WHERE link=?", 
-    [datetime.datetime.now(), chapterCount, novel["Name"], novelLink])
+    if nonPresentChapters:
+        curs.execute("UPDATE links SET lastUpdated=?, totalChapters=?, novelName=? WHERE link=?", [datetime.datetime.now(), chapterCount, novel["Name"], novelLink])
     
     print(f"System has {os.cpu_count()} cores... creating {os.cpu_count()} processes") if len(nonPresentChapters) >= os.cpu_count() else print (f"Creating {len(nonPresentChapters)} processes") 
     # This will prevent the behavior we currently see where a the latest books in the update are all only being handled by the last process
+    del novel["Chapters"]
     with Pool(processes=os.cpu_count()) as p:
         p.starmap(chaptersToAudio, [(chapter, novel) for chapter in nonPresentChapters])
         

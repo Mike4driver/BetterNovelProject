@@ -5,7 +5,7 @@ if __name__ == "__main__":
     conn = sqlite3.connect("novels.db")
 
     start_time = time.time()
-    textlist = (" " + row[0].strip() for row in conn.execute(f"SELECT [text] FROM chapters WHERE novelLink LIKE '%asura%'"))
+    textlist = (" " + row[0].strip() for row in conn.execute(f"SELECT [text] FROM chapters WHERE novelLink LIKE '%against%'"))
 
     total = 1
     for text in textlist:
