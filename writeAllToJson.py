@@ -123,11 +123,15 @@ def getNovelOnDemand(novelLink, conn, curs):
         newChapter = checkIfAudio(chapter, novel)
         if newChapter:
             nonPresentChapters.append((newChapter))
-    
-    if nonPresentChapters:
+
+    if not nonPresentChapters:
+        browser.quit()
+        return
+    else:
         curs.execute("UPDATE links SET lastUpdated=?, totalChapters=?, novelName=? WHERE link=?", [datetime.datetime.now(), chapterCount, novel["Name"], novelLink])
     
-    print(f"System has {os.cpu_count()} cores... creating {os.cpu_count()} processes") if len(nonPresentChapters) >= os.cpu_count() else print (f"Creating {len(nonPresentChapters)} processes") 
+
+    print(f"System has {os.cpu_count()} cores... creating {os.cpu_count()} processes for {novel['Name']}") if len(nonPresentChapters) >= os.cpu_count() else print (f"Creating {len(nonPresentChapters)} processes for {novel['Name']}") 
     # This will prevent the behavior we currently see where a the latest books in the update are all only being handled by the last process
     del novel["Chapters"]
     with Pool(processes=os.cpu_count()) as p:
