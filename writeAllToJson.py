@@ -9,6 +9,7 @@ import sqlite3
 import datetime
 from multiprocessing import Pool
 
+
 def getAllChapterLinks(link, browser):
     """
     Returns Dictionary containing information about the novel, Including the number of chapters and the chapter links
@@ -17,21 +18,23 @@ def getAllChapterLinks(link, browser):
     browser.get(link)
     try:
         chapterContainer = browser.find_element_by_id('accordion')
-        
-        chapterElems = (chapterElem for chapterElem in chapterContainer.find_elements_by_tag_name('a'))
+
+        chapterElems = (
+            chapterElem for chapterElem in chapterContainer.find_elements_by_tag_name('a'))
         # for chapterElem in chapterContainer.find_elements_by_tag_name('a'):
         #     chapterElems.append(chapterElem)
 
-        chapterLinks = (chapterElem.get_attribute("href") for chapterElem in chapterElems)
+        chapterLinks = (chapterElem.get_attribute("href")
+                        for chapterElem in chapterElems)
         novelInfo = {
             "Name": link.split("/")[-1],
             "Link": link,
-            "Chapters":[]
+            "Chapters": []
         }
-        novelInfo["Chapters"] = ({"chapterLink":chapterLink} for chapterLink in chapterLinks if "collapse" not in chapterLink)
+        novelInfo["Chapters"] = ({"chapterLink": chapterLink}
+                                 for chapterLink in chapterLinks if "collapse" not in chapterLink)
     except:
         novelInfo = {}
-
 
     return novelInfo
 
@@ -41,10 +44,12 @@ def getChapterTexts(link, browser):
     browser.get(link)
     try:
         chapterLinkNumber = link.split('/')[-1]
-        chapterText = browser.find_element_by_id("chapter-content").text.replace("Previous Chapter", "")
+        chapterText = browser.find_element_by_id(
+            "chapter-content").text.replace("Previous Chapter", "")
         return [chapterLinkNumber, chapterText]
     except:
         return False
+
 
 def stringIsNum(x):
     try:
@@ -53,13 +58,15 @@ def stringIsNum(x):
     except ValueError:
         return False
 
+
 def checkIfAudio(chapter, novel):
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
     chapterNumber = chapter["chapterNumber"]
     if os.path.isfile(newPath + f"\{str(chapterNumber).zfill(5)}.mp3"):
         return None
     return chapter
-    
+
+
 def chaptersToAudio(chapter, novel):
     os.environ["LANG"] = "en_US.UTF-8"
 
@@ -68,11 +75,12 @@ def chaptersToAudio(chapter, novel):
 
     chrome_options = Options()
     # chrome_options.add_argument("--headless")
-    chrome_options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript':2})
+    chrome_options.add_experimental_option(
+        "prefs", {'profile.managed_default_content_settings.javascript': 2})
     speaker = Sapi()
     speaker.set_rate(4)
     voices = speaker.get_voices()
-    speaker.set_voice(voices[1]) 
+    speaker.set_voice(voices[1])
     '''
      this line selects a voice from the array of voices avaiable on your system. 
      This value can be toyed with if you want to use a different voice. 
@@ -82,13 +90,17 @@ def chaptersToAudio(chapter, novel):
     chapterNumber = chapter["chapterNumber"]
     if not os.path.isfile(newPath + f"\{str(chapterNumber).zfill(5)}.mp3"):
         try:
-            browser = webdriver.Chrome(executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
-            chapterLinkNumber, chapterText = getChapterTexts(chapter['chapterLink'], browser)
+            browser = webdriver.Chrome(
+                executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
+            chapterLinkNumber, chapterText = getChapterTexts(
+                chapter['chapterLink'], browser)
             browser.quit()
             if chapterText:
-                chapterText = re.sub("\[A-Za-z0-9]",'', chapterText)
-                speaker.create_recording(newPath + f"\{str(chapterNumber).zfill(5)}.mp3", re.sub(r'Chapter \w+', r'', chapterText))
-                curs.execute("INSERT INTO chapters VALUES (?,?,?)", [novel["Link"], str(chapterNumber).zfill(5), chapterText])
+                chapterText = re.sub("\[A-Za-z0-9]", '', chapterText)
+                speaker.create_recording(
+                    newPath + f"\{str(chapterNumber).zfill(5)}.mp3", re.sub(r'Chapter \w+', r'', chapterText))
+                curs.execute("INSERT INTO chapters VALUES (?,?,?)", [
+                             novel["Link"], str(chapterNumber).zfill(5), chapterText])
                 conn.commit()
                 print(f"Chapter {chapter['chapterNumber']} finished")
 
@@ -99,14 +111,16 @@ def chaptersToAudio(chapter, novel):
                 pass
     else:
         conn.close()
-            
+
 
 def getNovelOnDemand(novelLink, conn, curs):
     os.environ["LANG"] = "en_US.UTF-8"
     chrome_options = Options()
     # chrome_options.add_argument("--headless")
-    chrome_options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript':2})
-    browser = webdriver.Chrome(executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
+    chrome_options.add_experimental_option(
+        "prefs", {'profile.managed_default_content_settings.javascript': 2})
+    browser = webdriver.Chrome(
+        executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
     novel = getAllChapterLinks(novelLink, browser)
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
     if not os.path.exists(newPath):
@@ -118,7 +132,7 @@ def getNovelOnDemand(novelLink, conn, curs):
 
     print(f"Skipping present chapters for {novel['Name']}")
     for chapter in novel["Chapters"]:
-        chapterCount+=1
+        chapterCount += 1
         chapter["chapterNumber"] = chapterCount
         newChapter = checkIfAudio(chapter, novel)
         if newChapter:
@@ -128,16 +142,16 @@ def getNovelOnDemand(novelLink, conn, curs):
         browser.quit()
         return
     else:
-        curs.execute("UPDATE links SET lastUpdated=?, totalChapters=?, novelName=? WHERE link=?", [datetime.datetime.now(), chapterCount, novel["Name"], novelLink])
-    
+        curs.execute("UPDATE links SET lastUpdated=?, totalChapters=?, novelName=? WHERE link=?", [
+                     datetime.datetime.now(), chapterCount, novel["Name"], novelLink])
 
-    print(f"System has {os.cpu_count()} cores... creating {os.cpu_count()} processes for {novel['Name']}") if len(nonPresentChapters) >= os.cpu_count() else print (f"Creating {len(nonPresentChapters)} processes for {novel['Name']}") 
+    print(f"System has {os.cpu_count()} cores... creating {os.cpu_count()} processes for {novel['Name']}") if len(
+        nonPresentChapters) >= os.cpu_count() else print(f"Creating {len(nonPresentChapters)} processes for {novel['Name']}")
     # This will prevent the behavior we currently see where a the latest books in the update are all only being handled by the last process
     del novel["Chapters"]
     with Pool(processes=os.cpu_count()) as p:
-        p.starmap(chaptersToAudio, [(chapter, novel) for chapter in nonPresentChapters])
-        
-
+        p.starmap(chaptersToAudio, [(chapter, novel)
+                                    for chapter in nonPresentChapters])
 
 
 if __name__ == '__main__':
@@ -147,16 +161,14 @@ if __name__ == '__main__':
     curs = conn.cursor()
     oldNovelLinks = (row[0] for row in curs.execute("SELECT link FROM links"))
 
-    
     for link in newNovelLinks:
         if link not in oldNovelLinks:
-            curs.execute("INSERT INTO links VALUES (?, ?, ?, ?)", [link, datetime.datetime.now(), None, None])
+            curs.execute("INSERT INTO links VALUES (?, ?, ?, ?)", [
+                         link, datetime.datetime.now(), None, None])
             conn.commit()
 
         getNovelOnDemand(link, conn, curs)
 
     conn.close()
 
-
-
-    print("--------%s seconds---------" % (time.time() -start_time))
+    print("--------%s seconds---------" % (time.time() - start_time))
