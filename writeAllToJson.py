@@ -88,7 +88,7 @@ def chaptersToAudio(chapter, novel):
             if chapterText:
                 chapterText = re.sub("\[A-Za-z0-9]",'', chapterText)
                 speaker.create_recording(newPath + f"\{str(chapterNumber).zfill(5)}.mp3", re.sub(r'Chapter \w+', r'', chapterText))
-                curs.execute("INSERT INTO chapters VALUES (?,?,?)", [novel["Link"], str(chapterNumber).zfill(5), chapterText])
+                curs.execute("INSERT INTO chapters VALUES (?,?,?, ?)", [novel["Link"], str(chapterNumber).zfill(5), chapterText, countWords(chapterText)])
                 conn.commit()
                 print(f"Chapter {chapter['chapterNumber']} finished")
 
@@ -100,6 +100,14 @@ def chaptersToAudio(chapter, novel):
     else:
         conn.close()
             
+def countWords(string):
+
+    total = 0
+    for letter in string:
+        if(letter == ' ' or letter == '\n' or letter == '\t'):
+            total = total + 1
+    return total
+
 
 def getNovelOnDemand(novelLink, conn, curs):
     os.environ["LANG"] = "en_US.UTF-8"
