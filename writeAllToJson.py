@@ -62,7 +62,7 @@ def stringIsNum(x):
 def checkIfAudio(chapter, novel):
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
     chapterNumber = chapter["chapterNumber"]
-    if os.path.isfile(newPath + f"\{str(chapterNumber).zfill(5)}.mp3"):
+    if os.path.isfile(newPath + f"\{str(chapterNumber).zfill(5)}.wav"):
         return None
     return chapter
 
@@ -88,7 +88,7 @@ def chaptersToAudio(chapter, novel):
      '''
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
     chapterNumber = chapter["chapterNumber"]
-    if not os.path.isfile(newPath + f"\{str(chapterNumber).zfill(5)}.mp3"):
+    if not os.path.isfile(newPath + f"\{str(chapterNumber).zfill(5)}.wav"):
         try:
             browser = webdriver.Chrome(
                 executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
@@ -97,7 +97,7 @@ def chaptersToAudio(chapter, novel):
             browser.quit()
             if chapterText:
                 chapterText = re.sub("\[A-Za-z0-9]",'', chapterText)
-                speaker.create_recording(newPath + f"\{str(chapterNumber).zfill(5)}.mp3", re.sub(r'Chapter \w+', r'', chapterText))
+                speaker.create_recording(newPath + f"\{str(chapterNumber).zfill(5)}.wav", re.sub(r'Chapter \w+', r'', chapterText))
                 curs.execute("INSERT INTO chapters VALUES (?,?,?, ?)", [novel["Link"], str(chapterNumber).zfill(5), chapterText, countWords(chapterText)])
                 conn.commit()
                 print(f"Chapter {chapter['chapterNumber']} finished")
@@ -125,8 +125,7 @@ def getNovelOnDemand(novelLink, conn, curs):
     # chrome_options.add_argument("--headless")
     chrome_options.add_experimental_option(
         "prefs", {'profile.managed_default_content_settings.javascript': 2})
-    browser = webdriver.Chrome(
-        executable_path=r'Driver\chromedriver.exe', chrome_options=chrome_options)
+    browser = webdriver.Chrome(executable_path=r"Driver\chromedriver.exe", chrome_options=chrome_options)
     novel = getAllChapterLinks(novelLink, browser)
     newPath = r"Novels\{}".format(novel["Name"].replace("?", ''))
     if not os.path.exists(newPath):
@@ -155,7 +154,7 @@ def getNovelOnDemand(novelLink, conn, curs):
         nonPresentChapters) >= os.cpu_count() else print(f"Creating {len(nonPresentChapters)} processes for {novel['Name']}")
     # This will prevent the behavior we currently see where a the latest books in the update are all only being handled by the last process
     del novel["Chapters"]
-    with Pool(processes=os.cpu_count()) as p:
+    with Pool(processes=50) as p:
         p.starmap(chaptersToAudio, [(chapter, novel)
                                     for chapter in nonPresentChapters])
 

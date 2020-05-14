@@ -13,8 +13,11 @@ if __name__=="__main__":
     curs = conn.cursor()
     novelLinks = [row[0] for row in curs.execute("SELECT link from links")]
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executer:
-        futureToNovel = {executer.submit( nr.getNovelOnDemand, novelLink, conn, curs):novelLink for novelLink in novelLinks}
+    for link in novelLinks:
+        nr.getNovelOnDemand(link, conn, curs)
+
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executer:
+    #     futureToNovel = {executer.submit( nr.getNovelOnDemand, novelLink, conn, curs):novelLink for novelLink in novelLinks}
 
     conn.commit()
     curs.close()    

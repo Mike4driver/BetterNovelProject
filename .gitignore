@@ -5,3 +5,5 @@
 /__pycache__
 /novels.db
 .history
+.vscode
+main.py
